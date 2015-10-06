@@ -1,4 +1,4 @@
-`hapi-method-routes` is a hapi plugin that expose server methods via a route
+`hapi-method-routes` is a hapi plugin that exposes server methods via routes
 
 ## Requirements
 * `/methods/{name}` should call that method and reply with it's results
