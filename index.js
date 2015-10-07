@@ -1,31 +1,35 @@
 'use strict';
 var _ = require('lodash');
-exports.register = function(server, options, next) {
+
+let defaults = {
   // option to change the endpoint:
-  let endpoint = options.endpoint ? options.endpoint : '/methods'
+  endpoint : '/methods',
   // option to overload the logging method:
-  let log = options.log ? options.log : function log(loggedMessage){
+  log : function log(loggedMessage){
     console.log(loggedMessage);
-  }
-  // optional blocklisting function that checks if this request
-  // should be able to call this method:
-  let blocklist = options.blocklist ? options.blocklist : function(methodName, request){
+  },
+  // optional blocklisting function to screen requests to a method:
+  blocklist : function(methodName, request){
     // by default we always allow access:
     return true;
-  }
-  // you can pass it a validator function
-  let validator = options.validator ? options.validator : function(params){
+  },
+  //  you can pass it a validator function
+  validator : function(params){
     return params;
   }
+}
+
+exports.register = function(server, options, next) {
+  let settings = _.clone(options);
+  settings = _.defaults(settings, defaults);
+  let endpoint = settings.endpoint;
+  let log = settings.log;
+  let blocklist = settings.blocklist;
+  let validator = settings.validator;
   log("methodsRoutePlugin is exporting the following methods at :" + endpoint);
   _.each(_.keys(server.methods), function(method){
     log(method);
   })
-  function parseBoolean(param){
-    if ("true".match(param.toLowerCase())) return true;
-    if ("false".match(param.toLowerCase())) return false;
-    return undefined
-  }
   // will extract/convert the parameters and add the 'done' handler for us
   function extractParamsFromRequest(request, done){
    let params = _.map(request.params.params.split("/"), function(param){
@@ -34,6 +38,7 @@ exports.register = function(server, options, next) {
    params.push(done);
    return params;
   }
+  // probably need something more robust but this works for 1 level:
   function getMethodFromServerWithNamespace(server, methodName){
     if (methodName.indexOf(".")>-1){
       var fields = methodName.split(".");
@@ -68,7 +73,7 @@ exports.register = function(server, options, next) {
           return;
         }
         log("Called Method Name " + methodName);
-        log("Called with params: " + params.toString())
+        // log("Called with params: " + params.toString())
         let method = getMethodFromServerWithNamespace(server, methodName);
         if (!method){
           reply('<h1> 404 Error </h1> <br> Method name ' + methodName + " does not exist ").code(404);
