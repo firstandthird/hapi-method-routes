@@ -1,0 +1,19 @@
+{
+  "name": "methods-route-plugin",
+  "version": "1.0.0",
+  "description": "lets you call a method as a route",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gist.github.com/orthagonal/019db86fa6bd51ae5de6"
+  },
+  "author": "chris harris",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gist.github.com/orthagonal/019db86fa6bd51ae5de6"
+  },
+  "homepage": "https://gist.github.com/orthagonal/019db86fa6bd51ae5de6"
+}
