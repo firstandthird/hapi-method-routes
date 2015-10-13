@@ -23,7 +23,7 @@ exports.register = function(server, options, next) {
   var whitelist = settings.whitelist;
   var validator = settings.validator;
   // list the methods we're exporting:
-  server.log("methodsRoutePlugin is exporting the following methods at :" + endpoint);
+  server.log(['hapi-method-routes', 'info'], "methodsRoutePlugin is exporting the following methods at :" + endpoint);
   _.each(_.keys(server.methods), function(method){
     server.log(['hapi-method-routes', 'info'], method);
   });
@@ -42,8 +42,6 @@ exports.register = function(server, options, next) {
     }
     return (!request.params.params) ? [] : decodeParamList(request.params.params.split("/"))
   }
-
-  server.log(['hapi-method-routes', 'info'], "methodsRoutePlugin is setting up a route at : " + endpoint);
   server.route({
       method: '*',
       path: endpoint + '/{methodName}/{params*}',
