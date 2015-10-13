@@ -20,21 +20,12 @@ exports.register = function(server, options, next) {
   var settings = _.clone(options);
   settings = _.defaults(settings, defaults);
   var endpoint = settings.endpoint;
-  // you can pass your own logging function as options.log
-  // by default we use hapi's default logging and tag it to this plugin,
-  var log = settings.log ? settings.log : function log(message, tags){
-    var logTags = ['hapi-method-routes'];
-    // will push/combine any custom tags you want to add to the default tag:
-    if (_.isArray(tags)) logTags = _.union(logTags, tags);
-    if (_.isString(tags)) logTags.push(tags);
-    server.log(logTags, { message: message })
-  }
   var whitelist = settings.whitelist;
   var validator = settings.validator;
   // list the methods we're exporting:
-  log("methodsRoutePlugin is exporting the following methods at :" + endpoint);
+  server.log("methodsRoutePlugin is exporting the following methods at :" + endpoint);
   _.each(_.keys(server.methods), function(method){
-    log(method, 'info');
+    server.log(['hapi-method-routes', 'info'], method);
   });
 
   // will decode any parameter list:
@@ -51,13 +42,8 @@ exports.register = function(server, options, next) {
     }
     return (!request.params.params) ? [] : decodeParamList(request.params.params.split("/"))
   }
-  function replyHandler(failureCode, response, reply){
-    if (failureCode)
-      reply({statusCode:failureCode, error: "Method Call Failed", message: response}).code(failureCode);
-    else
-      reply({successful: true, result: response})
-  }
-  log("methodsRoutePlugin is setting up a route at : " + endpoint);
+
+  server.log(['hapi-method-routes', 'info'], "methodsRoutePlugin is setting up a route at : " + endpoint);
   server.route({
       method: '*',
       path: endpoint + '/{methodName}/{params*}',
@@ -67,7 +53,7 @@ exports.register = function(server, options, next) {
         // this goes at the top because we want to short-circuit if they don't have access
         // to the indicated method:
         if (!whitelist(methodName, request)){
-          replyHandler(403, `You do not have access to ${methodName} `, reply);
+          reply({successful: false, result: `You do not have access to ${methodName} `}).code(550);
           return;
         }
         // extract and validate any params:
@@ -76,39 +62,37 @@ exports.register = function(server, options, next) {
         var method = _.get(server.methods, methodName);
         // first we're going to check for obvious errors:
         if (params==undefined){
-          replyHandler(404, 'Unable to validate parameters for method ' + methodName, reply);
+          reply({successful: false, result:'Unable to validate parameters for method ' + methodName}).code(500);
           return;
         }
         if (!method){
-          replyHandler(404, `Method name ${methodName} does not exist `, reply);
+          reply({successful: false, result:`Method name ${methodName} does not exist `}).code(404);
           return;
         }
         if (method.length-1 != params.length){
-          replyHandler(404, `Method name ${methodName}  takes  ${method.length} parameters `, reply);
+          reply({successful: false, result:`Method name ${methodName}  takes  ${method.length} parameters `}).code(500);
           return;
         }
         // add the 'done' callback to the function params
         // this is the method that will be called at the end of the method execution:
         params.push(function done(err,result){
            if (err){
-             replyHandler(500, `Method name ${methodName} threw this error: : ${err} `, reply)
+             reply({successful: false, result:`Method name ${methodName} threw this error: : ${err} `}).code(500);
            }
            else{
-             log(methodName + " returned successful, result was : " + result, 'debug');
-             replyHandler(null, result, reply);
+             reply({successful: true, result: result});
            }
         });
         // finally we try to execute the method:
         try{
           method.apply(null, params);
         }catch(exc){
-          log(exc);
-          replyHandler(404, `Method name ${methodName} failed. Error: ${exc}`, reply);
+          server.log(['hapi-method-routes', 'error'],exc);
+          reply(`Method name ${methodName} failed. Error: ${exc}`).code(404);
           return;
         }
       }
   });
-  log("doneregistering")
   next();
 }
 exports.register.attributes = {
