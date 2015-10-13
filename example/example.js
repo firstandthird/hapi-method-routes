@@ -1,7 +1,7 @@
 "use strict"
 var _ = require("lodash");
 var Hapi = require("hapi");
-var routeModule = require("methodsRoutePlugin")
+var routeModule = require("../index.js");
 
 // an example of a method to export. the last param of your method will be a 'done' callback
 // who's first param is any error message and second is the output of the method
@@ -38,9 +38,9 @@ server.register(
     }
   },
   function(err){
-    console.log("module registered")
+    server.log("module registered")
     if (err) {
-      console.log(err)
+      server.log(err)
     }
     else
       server.start(function () {
