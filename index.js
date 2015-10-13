@@ -1,15 +1,11 @@
 'use strict';
 var _ = require('lodash');
 
-let defaults = {
+var defaults = {
   // option to change the endpoint:
   endpoint : '/methods',
-  // option to overload the logging method:
-  log : function log(loggedMessage){
-    console.log(loggedMessage);
-  },
-  // optional blocklisting function to screen requests to a method:
-  blocklist : function(methodName, request){
+  // optional whitelist function to screen requests to a method:
+  whitelist : function(methodName, request){
     // by default we always allow access:
     return true;
   },
@@ -20,75 +16,123 @@ let defaults = {
 }
 
 exports.register = function(server, options, next) {
-  let settings = _.clone(options);
+  // setup defaults:
+  var settings = _.clone(options);
   settings = _.defaults(settings, defaults);
-  let endpoint = settings.endpoint;
-  let log = settings.log;
-  let blocklist = settings.blocklist;
-  let validator = settings.validator;
+  var endpoint = settings.endpoint;
+  // you can pass your own logging function as options.log
+  // by default we use hapi's default logging and tag it to this plugin,
+  var log = settings.log ? settings.log : function log(message, tags){
+    var logTags = ['hapi-method-routes'];
+    // will push/combine any custom tags you want to add to the default tag:
+    if (_.isArray(tags)) logTags = _.union(logTags, tags);
+    if (_.isString(tags)) logTags.push(tags);
+    console.log("TAGS: %s MESSAGE: %s", logTags, message);
+    server.log(logTags, { message: message })
+  }
+  var whitelist = settings.whitelist;
+  var validator = settings.validator;
+  // list the methods we're exporting:
   log("methodsRoutePlugin is exporting the following methods at :" + endpoint);
   _.each(_.keys(server.methods), function(method){
-    log(method);
-  })
-  // will extract/convert the parameters and add the 'done' handler for us
-  function extractParamsFromRequest(request, done){
-   let params = _.map(request.params.params.split("/"), function(param){
-     return encodeURIComponent(param);
+    log(method, 'info');
+  });
+
+  // call this to extra params from request by GET or POST:
+  // note: I think we're mainly wanting to support JSON/POST requests
+  function extractParamsFromRequest(request){
+    console.log(request.method)
+    if (request.method.toLowerCase()=='post'){
+      log("using POST/JSON method ")
+      log(request.payload)
+      var params = _.map(request.payload.values, function(param){
+        return decodeURIComponent(param);
+      });
+      return params;
+    }
+    else return extractParamsFromRequestGET(request);
+  }
+  // helper that is called by extractParamsFromRequest for GET requests:
+  // if you pass in a JSON package with 'values' it uses that
+  // otherwise it tries to extract params directly from the url path:
+  function extractParamsFromRequestGET(request){
+   log("using GET/url params method")
+   // gets empty array if params is undefined
+   var params = (!request.params.params) ? [] : _.map(request.params.params.split("/"), function(param){
+     return decodeURIComponent(param);
    });
-   params.push(done);
    return params;
   }
-  // probably need something more robust but this works for 1 level:
-  function getMethodFromServerWithNamespace(server, methodName){
-    if (methodName.indexOf(".")>-1){
-      var fields = methodName.split(".");
-      return server.methods[_.first(fields)][_.last(fields)];
-    }
-    return server.methods[methodName];
+
+  // helper functions to reply to a request,
+  // depending on the preferred return method
+  function replyAsHTML( failureCode, response, reply){
+    if (failureCode)
+      reply(`<h1>${failureCode}</h1> <br> ${response}`).code(failureCode);
+    else
+      reply(`<h1>Successful!<h1> <br> Result is: ${response}`);
   }
+  function replyAsJSON(failureCode, response, reply){
+    if (failureCode)
+      reply({statusCode:failureCode, error: "Method Call Failed", message: response}).code(failureCode);
+    else
+      reply({successful: true, result: response})
+  }
+  // change this to switch the reply method from JSON to HTML
+  // by default we're responding with JSON:
+  var replyHandler = replyAsJSON; // replyAsHTML;
 
   log("methodsRoutePlugin is setting up a route at : " + endpoint);
   server.route({
-      method: 'GET',
+      method: '*',
       path: endpoint + '/{methodName}/{params*}',
       handler: function (request, reply) {
-        let methodName = encodeURIComponent(request.params.methodName);
-        if (!blocklist(methodName, request)){
-          reply(`<h1> 403 Error </h1> <br> You do not have access to ${methodName} `).code(403)
+        // get the method they are trying to call:
+        var methodName = decodeURIComponent(request.params.methodName);
+        // this goes at the top because we want to short-circuit if they don't have access
+        // to the indicated method:
+        if (!whitelist(methodName, request)){
+          replyHandler(403, `You do not have access to ${methodName} `, reply);
           return;
         }
-        let params = extractParamsFromRequest(request, function done(err,result){
+        log("Called Method Name " + methodName, 'debug');
+        // extract and validate any params:
+        var params = extractParamsFromRequest(request);
+        params = validator(params);
+        var method = _.get(server.methods, methodName);
+
+        // first we're going to check for obvious errors:
+        if (params==undefined){
+          replyHandler(404, 'Unable to validate parameters for method ' + methodName, reply);
+          return;
+        }
+        log("Called with params: " + params.toString(), 'debug');
+        if (!method){
+          replyHandler(404, `Method name ${methodName} does not exist `, reply);
+          return;
+        }
+        if (method.length-1 != params.length){
+          replyHandler(404, `Method name ${methodName}  takes  ${method.length} parameters `, reply);
+          return;
+        }
+        // add the 'done' callback to the function params
+        // this is the method that will be called at the end of the method execution:
+        params.push(function done(err,result){
            if (err){
              log(err);
-             reply(`<h1> Failure! </h1> <br> Method name ${methodName} threw this error: : ${err} `);
-             return;
+             replyHandler(500, `Method name ${methodName} threw this error: : ${err} `, reply)
            }
-           log(methodName + " returned successful, result was : " + result);
-           reply(`<h1> Success! </h1> <br> Method name ${methodName} returns: ${result} `);
-           return result;
+           else{
+             log(methodName + " returned successful, result was : " + result, 'debug');
+             replyHandler(null, result, reply);
+           }
         });
-        params = validator(params);
-        if (params==undefined){
-          reply('<h1> 404 Error </h1> <br> Unable to validate parameters for method ' + methodName).code(404);
-          return;
-        }
-        log("Called Method Name " + methodName);
-        // log("Called with params: " + params.toString())
-        let method = getMethodFromServerWithNamespace(server, methodName);
-        if (!method){
-          reply('<h1> 404 Error </h1> <br> Method name ' + methodName + " does not exist ").code(404);
-          return;
-        }
-        if (method.length != params.length){
-          reply('<h1> 404 Error </h1> <br> Method name ' + methodName + " takes " + (method.length-1) + " parameters ").code(404);
-          return;
-        }
+        // finally we try to execute the method:
         try{
           method.apply(null, params);
-          return;
         }catch(exc){
           log(exc);
-          reply('<h1> 404 Error </h1> <br> Method name ' + methodName + " failed. <br> Error: <br> " + exc).code(404);
+          replyHandler(404, `Method name ${methodName} failed. Error: ${exc}`, reply);
           return;
         }
       }
