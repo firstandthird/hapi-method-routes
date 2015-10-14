@@ -27,7 +27,11 @@ function mathAdd(a,b,done){
 
 var samplePayload = { "values" : [20,25]};
 
-var server = new Hapi.Server();
+var server = new Hapi.Server({
+  debug : {
+       log : ['info', 'error']
+     },
+});
 
 // here is how you register your methods for export:
 server.method('add', add);
@@ -40,10 +44,9 @@ server.register(
     }
   },
   function(err){
-    server.log("module registered")
+    server.log(['hapi-method-routes', 'info'], "module registered")
     if (err) {
-      console.log(err);
-      server.log(err);
+      server.log(['hapi-method-routes', 'error'],err);
     }
     else
       server.start(function () {
