@@ -1,6 +1,6 @@
 'use strict';
 var _ = require('lodash');
-// 
+//
 var defaults = {
   // option to change the endpoint:
   endpoint : '/methods',
@@ -96,3 +96,4 @@ exports.register = function(server, options, next) {
 exports.register.attributes = {
     pkg: require('./package.json')
 };
+
