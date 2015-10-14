@@ -51,7 +51,7 @@ exports.register = function(server, options, next) {
         // this goes at the top because we want to short-circuit if they don't have access
         // to the indicated method:
         if (!whitelist(methodName, request)){
-          reply({successful: false, result: `You do not have access to ${methodName} `}).code(550);
+          reply({successful: false, result: 'You do not have access to ' + methodName}).code(550);
           return;
         }
         // extract and validate any params:
@@ -64,18 +64,18 @@ exports.register = function(server, options, next) {
           return;
         }
         if (!method){
-          reply({successful: false, result:`Method name ${methodName} does not exist `}).code(404);
+          reply({successful: false, result:'Method name ' + methodName + ' does not exist '}).code(404);
           return;
         }
         if (method.length-1 != params.length){
-          reply({successful: false, result:`Method name ${methodName}  takes  ${method.length} parameters `}).code(500);
+          reply({successful: false, result:'Method name ' + methodName + ' takes ' + method.length + ' parameters '}).code(500);
           return;
         }
         // add the 'done' callback to the function params
         // this is the method that will be called at the end of the method execution:
         params.push(function done(err,result){
            if (err){
-             reply({successful: false, result:`Method name ${methodName} threw this error: : ${err} `}).code(500);
+             reply({successful: false, result:'Method name ' + methodName + ' threw this error: '  + err}).code(500);
            }
            else{
              reply({successful: true, result: result});
@@ -86,7 +86,7 @@ exports.register = function(server, options, next) {
           method.apply(null, params);
         }catch(exc){
           server.log(['hapi-method-routes', 'error'],exc);
-          reply(`Method name ${methodName} failed. Error: ${exc}`).code(404);
+          reply('Method name ' + methodName + ' failed. Error: ' + exc).code(404);
           return;
         }
       }
