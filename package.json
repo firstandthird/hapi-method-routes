@@ -1,19 +1,15 @@
 {
-  "name": "methods-route-plugin",
-  "version": "1.0.0",
-  "description": "lets you call a method as a route",
+  "name": "hapi-method-routes",
+  "version": "0.0.1",
+  "description": "hapi plugin that exposes server methods as routes",
   "main": "index.js",
-  "scripts": {
-    "test": "test"
+  "author": "First+Third",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^3.10.1"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://gist.github.com/orthagonal/019db86fa6bd51ae5de6"
-  },
-  "author": "chris harris",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://gist.github.com/orthagonal/019db86fa6bd51ae5de6"
-  },
-  "homepage": "https://gist.github.com/orthagonal/019db86fa6bd51ae5de6"
+  "devDependencies": {
+    "hapi": "^11.0.2",
+    "request": "^2.65.0"
+  }
 }
