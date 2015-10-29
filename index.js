@@ -4,6 +4,7 @@ var _ = require('lodash');
 var defaults = {
   // option to change the endpoint:
   endpoint : '/methods',
+  auth: null,
   // optional whitelist function to screen requests to a method:
   whitelist : function(methodName, request){
     // by default we always allow access:
@@ -24,9 +25,6 @@ exports.register = function(server, options, next) {
   var validator = settings.validator;
   // list the methods we're exporting:
   server.log(['hapi-method-routes', 'info'], "methodsRoutePlugin is exporting the following methods at :" + endpoint);
-  _.each(_.keys(server.methods), function(method){
-    server.log(['hapi-method-routes', 'info'], method);
-  });
 
   // will decode any parameter list:
   function decodeParamList(paramList){
@@ -45,6 +43,9 @@ exports.register = function(server, options, next) {
   server.route({
       method: '*',
       path: endpoint + '/{methodName}/{params*}',
+      config: {
+        auth: settings.auth
+      },
       handler: function (request, reply) {
         // get the method they are trying to call:
         var methodName = decodeURIComponent(request.params.methodName);
