@@ -58,6 +58,7 @@ exports.register = function(server, options, next) {
         var params = extractParamsFromRequest(request);
         params = validator(params);
         var method = _.get(server.methods, methodName);
+
         // first we're going to check for obvious errors:
         if (params==undefined){
           reply({successful: false, result:'Unable to validate parameters for method ' + methodName}).code(500);
@@ -65,10 +66,6 @@ exports.register = function(server, options, next) {
         }
         if (!method){
           reply({successful: false, result:'Method name ' + methodName + ' does not exist '}).code(404);
-          return;
-        }
-        if (method.length-1 != params.length){
-          reply({successful: false, result:'Method name ' + methodName + ' takes ' + method.length + ' parameters '}).code(500);
           return;
         }
         // add the 'done' callback to the function params
@@ -96,4 +93,3 @@ exports.register = function(server, options, next) {
 exports.register.attributes = {
     pkg: require('./package.json')
 };
-
