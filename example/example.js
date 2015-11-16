@@ -34,8 +34,15 @@ var server = new Hapi.Server({
 });
 
 // here is how you register your methods for export:
-server.method('add', add);
-server.method('math.add', mathAdd)
+server.method('add', add, {
+  cache: {
+    // cache : 'temp',
+    expiresIn: 5000,
+    generateTimeout : 5000
+  }
+});
+
+server.method('math.add', mathAdd);
 server.connection({ port: 3000 });
 server.register(
   {
@@ -65,6 +72,7 @@ server.register(
             else
               console.log("add did not succeed, result was : %s", response.statusCode, body.result);
         });
+        /*
         // test namespace method:
         request({
             url: 'http://localhost:3000/methods/math.add', //URL to hit
@@ -102,7 +110,7 @@ server.register(
             else
               console.log("empty json should throw an error: ", response.statusCode, body.result);
         });
-
+*/
     });
   }
 );
