@@ -25,7 +25,7 @@ tap.afterEach((done) => {
 });
 
 tap.test('lets you register a method with the server and call it as a route', (t) => {
-  server.method('add', (a, b, done) => done(null, a + b), {});
+  server.method('add', (a, b, done) => done(null, a.toString() + b.toString()), {});
   server.inject({
     url: '/methods/add',
     method: 'POST',
@@ -64,7 +64,7 @@ tap.test('lets you register a sub-document method with the server and call it as
   });
 });
 
-tap.test('returns error when wrong number of parameters is passed', (t) => {
+tap.test('returns 404 when wrong number of parameters is passed', (t) => {
   server.method('add', (a, b, done) => done(null, a + b), {});
   server.inject({
     url: '/methods/add',
@@ -73,7 +73,6 @@ tap.test('returns error when wrong number of parameters is passed', (t) => {
     }
   }, response => {
     t.equal(response.statusCode, 404);
-    t.equal(response.result, 'Method name add failed. Error: TypeError: done is not a function');
     t.end();
   });
 });
@@ -92,7 +91,7 @@ tap.test('return 404 when you call a method that does not exist', (t) => {
 });
 
 tap.test('lets you specify the method to call inside a POST payload', (t) => {
-  server.method('add', (a, b, done) => done(null, a + b), {});
+  server.method('add', (a, b, done) => done(null, a.toString() + b.toString()), {});
   server.inject({
     url: '/methods/',
     method: 'POST',

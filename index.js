@@ -1,5 +1,4 @@
 'use strict';
-const _ = require('lodash');
 const str2fn = require('str2fn');
 
 const defaults = {
@@ -18,19 +17,6 @@ exports.register = (server, options, next) => {
   const settings = Object.assign({}, defaults, options);
   const endpoint = settings.endpoint;
   const whitelist = settings.whitelist;
-  // list the methods we're exporting:
-  server.log(['hapi-method-routes', 'info'], `methodsRoutePlugin is exporting the following methods at : ${endpoint}`);
-
-  // will decode any parameter list:
-  const decodeParamList = (paramList) => _.map(paramList, (param) => decodeURIComponent(param));
-  // call this to extra params from request by GET or POST:
-  // note: I think we're mainly wanting to support JSON/POST requests
-  const extractParamsFromRequest = (request) => {
-    if (request.method.toLowerCase() === 'post') {
-      return decodeParamList(request.payload.values);
-    }
-    return (!request.params.params) ? [] : decodeParamList(request.params.params.split('/'));
-  };
   server.route({
     method: 'POST',
     path: `${endpoint}/{methodName}/{params*}`,
@@ -38,37 +24,21 @@ exports.register = (server, options, next) => {
       auth: settings.auth
     },
     handler(request, reply) {
-      // get the method they are trying to call:
+      // determine the name of the method they are trying to call:
       const methodName = typeof request.payload.method === 'string' ? request.payload.method : decodeURIComponent(request.params.methodName);
-      // this goes at the top because we want to short-circuit if they don't have access
-      // to the indicated method:
+      // stop them if they don't have access to the indicated method:
       if (!whitelist(methodName, request)) {
-        reply({ successful: false, result: `You do not have access to ${methodName}` }).code(550);
-        return;
+        return reply({ successful: false, result: `You do not have access to ${methodName}` }).code(550);
       }
-      // extract and validate any params:
-      const params = extractParamsFromRequest(request);
-      const method = _.get(server.methods, methodName);
-
-      // first we're going to check for obvious errors:
-      if (params === undefined) {
-        reply({ successful: false, result: `Unable to validate parameters for method ${methodName}` }).code(500);
-        return;
-      }
-      if (!method) {
-        reply({ successful: false, result: `Method name ${methodName} does not exist ` }).code(404);
-        return;
-      }
-      // add the 'done' callback to the function params
-      // this is the method that will be called at the end of the method execution:
+      const method = str2fn(server.methods, methodName, () => reply({ successful: false, result: `Method name ${methodName} does not exist ` }).code(404));
+      const params = request.payload.values || request.params.params || [];
       params.push((err, result) => {
-        if (err) {
+        if (err !== null) {
           reply({ successful: false, result: `Method name ${methodName} threw this error: ${err}` }).code(500);
         } else {
           reply({ successful: true, result });
         }
       });
-      // finally we try to execute the method:
       try {
         method.apply(null, params);
       } catch (exc) {
