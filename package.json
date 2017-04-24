@@ -5,10 +5,17 @@
   "main": "index.js",
   "author": "First+Third",
   "license": "MIT",
+  "eslintConfig": {
+    "extends": "firstandthird"
+  },
   "dependencies": {
-    "lodash": "^3.10.1"
+    "lodash": "^3.10.1",
+    "str2fn": "^2.0.0"
   },
   "devDependencies": {
+    "eslint": "^3.9.1",
+    "eslint-config-firstandthird": "^3.2.0",
+    "eslint-plugin-import": "^2.1.0",
     "hapi": "^11.0.2",
     "request": "^2.65.0"
   }
