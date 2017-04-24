@@ -10,10 +10,6 @@ const defaults = {
   whitelist(methodName, request) {
     // by default we always allow access:
     return true;
-  },
-  //  you can pass it a validator function
-  validator(params) {
-    return params;
   }
 };
 
@@ -22,7 +18,6 @@ exports.register = (server, options, next) => {
   const settings = Object.assign({}, defaults, options);
   const endpoint = settings.endpoint;
   const whitelist = settings.whitelist;
-  const validator = settings.validator;
   // list the methods we're exporting:
   server.log(['hapi-method-routes', 'info'], `methodsRoutePlugin is exporting the following methods at : ${endpoint}`);
 
@@ -37,14 +32,14 @@ exports.register = (server, options, next) => {
     return (!request.params.params) ? [] : decodeParamList(request.params.params.split('/'));
   };
   server.route({
-    method: '*',
+    method: 'POST',
     path: `${endpoint}/{methodName}/{params*}`,
     config: {
       auth: settings.auth
     },
     handler(request, reply) {
       // get the method they are trying to call:
-      const methodName = decodeURIComponent(request.params.methodName);
+      const methodName = typeof request.payload.method === 'string' ? request.payload.method : decodeURIComponent(request.params.methodName);
       // this goes at the top because we want to short-circuit if they don't have access
       // to the indicated method:
       if (!whitelist(methodName, request)) {
@@ -52,8 +47,7 @@ exports.register = (server, options, next) => {
         return;
       }
       // extract and validate any params:
-      let params = extractParamsFromRequest(request);
-      params = validator(params);
+      const params = extractParamsFromRequest(request);
       const method = _.get(server.methods, methodName);
 
       // first we're going to check for obvious errors:

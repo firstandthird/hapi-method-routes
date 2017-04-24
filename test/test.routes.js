@@ -90,3 +90,20 @@ tap.test('return 404 when you call a method that does not exist', (t) => {
     t.end();
   });
 });
+
+tap.test('lets you specify the method to call inside a POST payload', (t) => {
+  server.method('add', (a, b, done) => done(null, a + b), {});
+  server.inject({
+    url: '/methods/',
+    method: 'POST',
+    payload: {
+      method: 'add',
+      values: [20, 25]
+    }
+  }, response => {
+    t.equal(response.statusCode, 200);
+    t.equal(response.result.successful, true);
+    t.equal(response.result.result, '2025');
+    t.end();
+  });
+});
