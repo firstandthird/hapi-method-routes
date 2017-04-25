@@ -1,6 +1,6 @@
 {
   "name": "hapi-method-routes",
-  "version": "1.0.0",
+  "version": "0.0.3",
   "description": "hapi plugin that exposes server methods as routes",
   "main": "index.js",
   "author": "First+Third",
