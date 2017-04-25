@@ -4,11 +4,10 @@
 ```js
 server.method('add', (a, b, done) => done(null, a.toString() + b.toString()), {});
 server.inject({
-  url: '/methods/',
+  url: '/methods',
   method: 'POST',
   payload: {
-    method: 'add',
-    values: [20, 25]
+    method: 'add(20, 25)'
   }
 }, response => {
   console.log(response.result.successful);
