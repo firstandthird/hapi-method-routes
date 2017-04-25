@@ -19,7 +19,7 @@ exports.register = (server, options, next) => {
     },
     handler(request, reply) {
       str2fn.execute(request.payload.method, server.methods, {}, (err, result) => {
-        if (err !== null) {
+        if (err) {
           if (err.toString().indexOf('does not exist') > -1) {
             return reply({ successful: false, result: `Method call ${request.payload.method} invokes a method that is not defined` }).code(404);
           }
